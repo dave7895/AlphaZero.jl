@@ -31,8 +31,16 @@ TwoPlayers
 play_game
 Trace
 Base.push!(::Trace, π, r, s)
-pit
-ColorPolicy
 interactive!
 Human
+```
+
+### Distributed Simulator
+
+```@docs
+Simulator
+record_trace
+ColorPolicy
+simulate
+simulate_distributed
 ```

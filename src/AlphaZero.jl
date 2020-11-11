@@ -6,7 +6,8 @@
 module AlphaZero
 
 # Submodules
-export MCTS, MinMax, GameInterface, GI, Report, Network, Benchmark
+export MCTS, MinMax, GameInterface, GI, Report, Benchmark
+export Network, KnetLib, FluxLib, NetLib
 # AlphaZero parameters
 export Params, SelfPlayParams, LearningParams, ArenaParams
 export MctsParams, MemAnalysisParams
@@ -15,12 +16,11 @@ export AbstractSchedule, ConstSchedule, PLSchedule, StepSchedule
 # Players and games
 export AbstractGame, AbstractPlayer, TwoPlayers, Trace
 export think, select_move, reset_player!, player_temperature, apply_temperature
-export play_game, interactive!
+export play_game, interactive!, total_reward
 export MctsPlayer, RandomPlayer, EpsilonGreedyPlayer, NetworkPlayer, Human
 export ColorPolicy, ALTERNATE_COLORS, BASELINE_WHITE, CONTENDER_WHITE
 # Networks
 export AbstractNetwork, OptimiserSpec, Nesterov, CyclicNesterov, Adam
-export SimpleNet, SimpleNetHP, ResNet, ResNetHP
 # Training environments
 export Env, train!, get_experience
 # User interface
@@ -42,11 +42,16 @@ import .MCTS
 include("networks/network.jl")
 using .Network
 
+include("batchifier.jl")
+import .Batchifier
+
 using Formatting
 using Base: @kwdef
 using DataStructures: CircularBuffer
 using Distributions: Categorical, Dirichlet
 using Statistics: mean
+
+import Distributed
 
 include("schedule.jl")
 include("params.jl")
@@ -63,23 +68,11 @@ import .MinMax
 include("benchmark.jl")
 using .Benchmark
 
-# We provide a library of predefined network architectures for convenience.
-# Right now, it is included in the main AlphaZero.jl package. In the future,
-# we may want to separate it so as to drop the Knet and Flux dependencies.
+include("networks/knet.jl")
+# import .KnetLib
 
-const USE_KNET_FOR_NETLIB = true # The Flux netlib is currently broken
-
-if USE_KNET_FOR_NETLIB
-  @eval begin
-    include("networks/knet.jl")
-    using .KNets
-  end
-else
-  @eval begin
-    include("networks/flux.jl")
-    using .FluxNets
-  end
-end
+include("networks/flux.jl")
+# import .FluxLib
 
 # The default user interface is included here for convenience but it could be
 # replaced or separated from the main AlphaZero.jl package (which would also
@@ -87,5 +80,22 @@ end
 
 include("ui/ui.jl")
 using .UserInterface
+
+# Choose the default DL framework based on an environment variable
+function __init__()
+  @eval begin
+    const DEFAULT_DL_FRAMEWORK = get(ENV, "ALPHAZERO_DEFAULT_DL_FRAMEWORK", "FLUX")
+    const NetLib =
+      if DEFAULT_DL_FRAMEWORK == "FLUX"
+        @info "Using Flux."
+        FluxLib
+      elseif DEFAULT_DL_FRAMEWORK == "KNET"
+        @info "Using Knet."
+        KnetLib
+      else
+        error("Unknown DL framework: $(DEFAULT_DL_FRAMEWORK)")
+      end
+  end
+end
 
 end

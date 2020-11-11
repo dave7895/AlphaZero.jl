@@ -9,7 +9,13 @@ ENV["JULIA_CUDA_MEMORY_POOL"] = "split" # "binned" / "split"
 # Enables running the script on a distant machine without an X server
 ENV["GKSwstype"]="nul"
 
+# When running on a CPU, having multiple threads does not play
+# well with BLAS multithreading
+using LinearAlgebra
+BLAS.set_num_threads(1)
+
 using AlphaZero
+import Distributed
 include("games.jl")
 
 #####
@@ -33,6 +39,9 @@ argstab = ArgParseSettings()
   "replot"
     action = :command
     help = "Regenerate all the session plots from the JSON reports"
+  "check-game"
+    action = :command
+    help = "Check that the current game respects all expected invariants"
   "--save-intermediate"
     action = :store_true
     help = "Save all intermediate states during training"
@@ -61,22 +70,28 @@ netparams = Training.netparams
 benchmark = Training.benchmark
 
 include("lib/dummy_run.jl")
+include("../test/test_game.jl")
 
 if get(ENV, "DUMMY_RUN", "false") == "true"
   @warn "Running dummy run"
   params, benchmark = dummy_run_params(Training.params, Training.benchmark)
 end
 
-session = Session(
-  Game, Training.Network{Game}, params, netparams, benchmark=benchmark,
-  dir=SESSION_DIR, autosave=true, save_intermediate=args["save-intermediate"])
-
-if cmd == "train"
-  resume!(session)
-elseif cmd == "explore"
-  start_explorer(session)
-elseif cmd == "play"
-  play_interactive_game(session)
-elseif cmd == "replot"
-  AlphaZero.UserInterface.regenerate_plots(session)
+if cmd == "check-game"
+  test_game(Game)
+  @info "All tests passed."
+else
+  println("\nUsing $(Distributed.nworkers()) distributed worker(s).\n")
+  session = Session(
+    Game, Training.Network{Game}, params, netparams, benchmark=benchmark,
+    dir=SESSION_DIR, autosave=true, save_intermediate=args["save-intermediate"])
+  if cmd == "train"
+    resume!(session)
+  elseif cmd == "explore"
+    start_explorer(session, mcts_params=Training.arena.mcts, on_gpu=true)
+  elseif cmd == "play"
+    play_interactive_game(session, mcts_params=Training.arena.mcts, on_gpu=true)
+  elseif cmd == "replot"
+    AlphaZero.UserInterface.regenerate_plots(session)
+  end
 end

@@ -36,7 +36,7 @@ function evaluate_vnet(oracle::MCTS.Oracle, game)
   if GI.game_terminated(game)
     return 0.0
   else
-    return MCTS.evaluate(oracle, GI.current_state(game))[2]
+    return oracle(GI.current_state(game))[2]
   end
 end
 
@@ -102,7 +102,7 @@ function state_statistics(game, player, turn, memory=nothing)
   # Collect network statistics
   oracle = player_oracle(player)
   if isa(oracle, AbstractNetwork)
-    Pnet, Vnet = MCTS.evaluate(oracle, state)
+    Pnet, Vnet = oracle(state)
     report.Vnet = Vnet
     for i in eachindex(actions)
       arep = report.actions[i][2]
@@ -215,11 +215,12 @@ end
 
 GameType(::Explorer{Game}) where Game = Game
 
-function Explorer(env::Env, game=nothing; arena_mode=false)
+function Explorer(
+    env::Env, game=nothing; mcts_params=env.params.self_play.mcts, on_gpu=false)
   Game = GameType(env)
   isnothing(game) && (game = Game())
-  mcts_params = arena_mode ? env.params.arena.mcts : env.params.self_play.mcts
-  player = MctsPlayer(env.bestnn, mcts_params)
+  net = Network.copy(env.bestnn, on_gpu=on_gpu, test_mode=true)
+  player = MctsPlayer(net, mcts_params)
   return Explorer(player, game, memory=env.memory)
 end
 
@@ -236,7 +237,12 @@ save_game!(exp::Explorer) = push!(exp.history, copy(exp.game))
 function interpret!(exp::Explorer, stats, cmd, args=[])
   Game = GameType(exp)
   if cmd == "go"
-    g = Game(GI.read_state(Game))
+    st = GI.read_state(Game)
+    if isnothing(st)
+      println("Invalid state description.")
+      return false
+    end
+    g = Game(st)
     if !isnothing(st)
       save_game!(exp)
       exp.game = g

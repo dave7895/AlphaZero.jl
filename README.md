@@ -1,10 +1,21 @@
-# AlphaZero.jl
-
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://jonathan-laurent.github.io/AlphaZero.jl/dev)
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://jonathan-laurent.github.io/AlphaZero.jl/stable)
-[![Build Status](https://travis-ci.com/jonathan-laurent/AlphaZero.jl.svg?branch=master)](https://travis-ci.com/jonathan-laurent/AlphaZero.jl)
-[![Codecov](https://codecov.io/gh/jonathan-laurent/AlphaZero.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jonathan-laurent/AlphaZero.jl)
-[![Gitter](https://badges.gitter.im/alphazero-jl/community.svg)](https://gitter.im/alphazero-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+<p align="center">
+  <img width="230px" src="./docs/src/assets/logo-text.png"/>
+</p>
+<p align="center">
+  <a href="https://jonathan-laurent.github.io/AlphaZero.jl/dev" alt="Dev">
+    <img src="https://img.shields.io/badge/docs-dev-blue.svg"/>
+  </a>
+  <a href="https://jonathan-laurent.github.io/AlphaZero.jl/stable" alt="Stable">
+    <img src="https://img.shields.io/badge/docs-stable-blue.svg"/>
+  </a>
+  <a href="https://travis-ci.com/jonathan-laurent/AlphaZero.jl" alt="Build Status">
+    <img src="https://travis-ci.com/jonathan-laurent/AlphaZero.jl.svg?branch=master"/>
+  </a>
+  <a href="https://codecov.io/gh/jonathan-laurent/AlphaZero.jl" alt="Codecov">
+    <img src="https://codecov.io/gh/jonathan-laurent/AlphaZero.jl/branch/master/graph/badge.svg"/>
+  </a>
+</p>
+<br/>
 
 This package provides a _generic_, _simple_ and _fast_ implementation of
 Deepmind's AlphaZero algorithm:
@@ -43,7 +54,7 @@ We found the [Julia language](https://julialang.org/) to be instrumental in achi
 To download AlphaZero.jl and start training a Connect Four agent, just run:
 
 ```
-git clone --branch v0.2.1 https://github.com/jonathan-laurent/AlphaZero.jl.git
+git clone --branch v0.3.0 https://github.com/jonathan-laurent/AlphaZero.jl.git
 cd AlphaZero.jl
 julia --project -e "import Pkg; Pkg.instantiate()"
 julia --project --color=yes scripts/alphazero.jl --game connect-four train
@@ -61,7 +72,7 @@ julia --project --color=yes scripts/alphazero.jl --game connect-four train
 
 <br/>
 
-Each training iteration takes between one and two hours on a desktop
+Each training iteration takes between 30 and 50 minutes on a desktop
 computer with an Intel Core i5 9600K processor and an 8GB Nvidia RTX
 2070 GPU. We plot below the evolution of the win rate of our AlphaZero agent against two baselines (a vanilla MCTS baseline and a minmax agent that plans at depth 5 using a handcrafted heuristic):
 
@@ -102,14 +113,15 @@ For more information on training a Connect Four agent using AlphaZero.jl, see ou
 - [Connect-Four Tutorial](https://jonathan-laurent.github.io/AlphaZero.jl/dev/tutorial/connect_four/)
 - [Hyperparameters Documentation](https://jonathan-laurent.github.io/AlphaZero.jl/dev/reference/params/)
 
-### Contributing
+### Contributors
+
+* Main developer: Jonathan Laurent
+* Logo design: Pavel Dimens
 
 Contributions to AlphaZero.jl are most welcome. Many contribution ideas are available in our [contribution guide](https://jonathan-laurent.github.io/AlphaZero.jl/dev/contributing/guide/).
 Please do not hesitate to open a Github
 [issue](https://github.com/jonathan-laurent/AlphaZero.jl/issues) to share
 any idea, feedback or suggestion.
-
-
 
 ### Acknowledgements
 

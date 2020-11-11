@@ -124,17 +124,9 @@ function load_network(logger, net_file, netparams_file)
 end
 
 function load_env(
-    ::Type{Game}, ::Type{Network}, logger, dir; params=nothing
+    ::Type{Game}, ::Type{Network}, logger, dir; params
   ) where {Game, Network}
   Log.section(logger, 1, "Loading environment")
-  # Load parameters
-  if isnothing(params)
-    params_file = joinpath(dir, PARAMS_FILE)
-    params = open(params_file, "r") do io
-      JSON3.read(io, Params)
-    end
-    Log.print(logger, "Loading parameters from: $(params_file)")
-  end
   # Load the neural networks
   netparams_file = joinpath(dir, NET_PARAMS_FILE)
   bestnn = load_network(logger, joinpath(dir, BESTNN_FILE), netparams_file)
@@ -251,7 +243,7 @@ function run_duel(env, logger, duel)
   progress = Log.Progress(logger, duel.num_games)
   outcome = Benchmark.run(env, duel, progress)
   show_space_after_progress_bar(logger)
-  z = fmt("+.2f", outcome.avgz)
+  z = fmt("+.2f", outcome.avgr)
   if env.params.ternary_rewards
     stats = Benchmark.TernaryOutcomeStatistics(outcome)
     n = length(outcome.rewards)
@@ -260,7 +252,7 @@ function run_duel(env, logger, duel)
     plost = percentage(stats.num_lost, n)
     details = "$pwon% won, $pdraw% draw, $plost% lost"
   else
-    wr = win_rate(outcome.avgz)
+    wr = win_rate(outcome.avgr)
     details = "win rate of $wr%"
   end
   red = fmt(".1f", 100 * outcome.redundancy)
@@ -325,9 +317,6 @@ it already exists.
     any file will be generated
 - `nostdout=false`: disables logging on the standard output when set to `true`
 - `benchmark=[]`: vector of [`Benchmark.Duel`](@ref) to be used as a benchmark
-- `load_saved_params=false`: if set to `true`, load the training parameters from
-    the session directory (if present) rather than using the `params`
-    argument
 - `save_intermediate=false`: if set to true (along with `autosave`), all
     intermediate training environments are saved on disk so that
     the whole training process can be analyzed later. This can
@@ -336,12 +325,11 @@ it already exists.
 function Session(
     ::Type{Game}, ::Type{Net}, params, netparams;
     dir=nothing, autosave=true, nostdout=false, benchmark=[],
-    load_saved_params=false, save_intermediate=false
+    save_intermediate=false
   ) where {Game, Net}
   logger = session_logger(dir, nostdout, autosave)
   if valid_session_dir(dir)
-    env = load_env(Game, Net, logger, dir,
-      params=(load_saved_params ? nothing : params))
+    env = load_env(Game, Net, logger, dir, params=params)
     # The parameters must be unchanged
     same_json(x, y) = JSON3.write(x) == JSON3.write(y)
     same_json(env.params, params) || @info "Using modified parameters"
@@ -356,24 +344,6 @@ function Session(
     zeroth_iteration!(session)
   end
   return session
-end
-
-"""
-    Session(::Type{Game}, ::Type{Network}, dir::String) where {Game, Net}
-
-Load an existing session from a directory.
-
-This constructor accepts the optional keyword arguments
-`autosave`, `nostdout`, `benchmark` and `save_intermediate`.
-"""
-function Session(
-    ::Type{Game}, ::Type{Network}, dir::String;
-    autosave=true, nostdout=false, benchmark=[], save_intermediate=false
-  ) where {Game, Network}
-  @assert valid_session_dir(dir)
-  logger = session_logger(dir, nostdout, autosave)
-  env = load_env(Game, Network, logger, dir)
-  return Session(env, dir, logger, autosave, save_intermediate, benchmark)
 end
 
 """
@@ -434,9 +404,10 @@ end
 
 Start an explorer session for the current environment. See [`Explorer`](@ref).
 """
-function start_explorer(session::Session)
+function start_explorer(session::Session; mcts_params=nothing, on_gpu=false)
+  isnothing(mcts_params) && (mcts_params = session.env.params.self_play.mcts)
   Log.section(session.logger, 1, "Starting interactive exploration")
-  explorer = Explorer(session.env)
+  explorer = Explorer(session.env, mcts_params=mcts_params, on_gpu=on_gpu)
   start_explorer(explorer)
 end
 
@@ -446,12 +417,12 @@ end
 Start an interactive game against AlphaZero, allowing it
 `timeout` seconds of thinking time for each move.
 """
-function play_interactive_game(session::Session; timeout=2.)
+function play_interactive_game(
+    session::Session; timeout=2., mcts_params=nothing, on_gpu=false)
   Game = GameType(session)
-  player = MctsPlayer(
-    session.env.bestnn,
-    session.env.params.arena.mcts,
-    timeout=timeout)
+  net = Network.copy(session.env.bestnn, on_gpu=on_gpu, test_mode=true)
+  isnothing(mcts_params) && (mcts_params = session.env.params.self_play.mcts)
+  player = MctsPlayer(net, mcts_params, timeout=timeout)
   interactive!(Game(), player, Human{Game}())
 end
 
@@ -510,8 +481,6 @@ function print_report(logger::Logger, stats::Report.Memory)
 end
 
 function print_report(logger::Logger, report::Report.SelfPlay)
-  t = round(Int, 100 * report.inference_time_ratio)
-  Log.print(logger, "Time spent on inference: $(t)%")
   sspeed = format(round(Int, report.samples_gen_speed), commas=true)
   Log.print(logger, "Generating $(sspeed) samples per second on average")
   avgdepth = fmt(".1f", report.average_exploration_depth)
@@ -584,11 +553,11 @@ end
 
 function Handlers.checkpoint_finished(session::Session, report)
   show_space_after_progress_bar(session.logger)
-  avgz = fmt("+.2f", report.reward)
+  avgr = fmt("+.2f", report.reward)
   wr = win_rate(report.reward)
   red = fmt(".1f", report.redundancy * 100)
   nnr = report.nn_replaced ? ", network replaced" : ""
-  msg = "Average reward: $avgz (win rate of $wr%$nnr), redundancy: $red%"
+  msg = "Average reward: $avgr (win rate of $wr%$nnr), redundancy: $red%"
   Log.print(session.logger, msg)
   Log.section(session.logger, 3, "Optimizing the loss")
 end

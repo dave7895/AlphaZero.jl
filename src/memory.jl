@@ -61,7 +61,6 @@ cur_batch_size(mem::MemoryBuffer) = min(mem.cur_batch_size, length(mem))
 new_batch!(mem::MemoryBuffer) = (mem.cur_batch_size = 0)
 
 function Base.empty!(mem::MemoryBuffer)
-  empty!(mem.cur)
   empty!(mem.buf)
   mem.cur_batch_size = 0
 end
@@ -87,6 +86,7 @@ function push_game!(mem::MemoryBuffer, trace, gamma)
     t = float(n - i + 1)
     push!(mem.buf, TrainingSample(s, π, z, t, 1))
   end
+  mem.cur_batch_size += n
 end
 
 function merge_samples(samples)
