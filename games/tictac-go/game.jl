@@ -13,18 +13,21 @@ const BLACK = false
 const Cell = Union{Nothing,Player}
 const Board = SVector{NUM_POSITIONS,Cell}
 const INITIAL_BOARD = Board(repeat([nothing], NUM_POSITIONS))
+const INITIAL_STATE = (board=INITIAL_BOARD, curplayer=WHITE)
 
 mutable struct Game <: GI.AbstractGame
     board::Board
     curplayer::Player
-    function Game(board = INITIAL_BOARD, player = WHITE)
-        new(board, player)
+    function Game(state=INITIAL_STATE)
+        new(state.board, state.curplayer)
     end
 end
 
-GI.Board(::Type{Game}) = Board
+GI.State(::Type{Game}) = typeof(INITIAL_STATE)
 
 GI.Action(::Type{Game}) = Int
+
+GI.two_players(::Type{Game}) = true
 
 #####
 ##### Defining helper functions, e.g. surrounded cells
@@ -145,7 +148,7 @@ const ALIGNMENTS = let N = BOARD_SIDE
 end
 =#
 function has_won(g::Game, player)
-    if any((GI.actions_mask(g)))
+    if any((GI.actions_mask(g))) && any((GI.actions_mask(g,True)))
         return false
     end
     player_area(player) = get_controlled_area(g.board, player)
@@ -166,10 +169,15 @@ const ACTIONS = collect(1:NUM_POSITIONS)
 
 GI.actions(::Type{Game}) = ACTIONS
 
-Base.copy(g::Game) = Game(g.board, g.curplayer)
+#Base.copy(g::Game) = Game(g.board, g.curplayer)
 
-function GI.actions_mask(g::Game) # = false)
+function GI.actions_mask(g::Game, manual_player=False) # = false)
     #@debug("curplayer = $(g.curplayer)")
+    if !manual_player
+        curplayer=g.curplayer
+    else
+        curplayer=!(g.curplayer)
+    end
     mask = map(isnothing, g.board)
     mask = [
         is_playable(g.board, i, g.curplayer) for i = 1:length(g.board)
@@ -189,11 +197,16 @@ end
 
 GI.white_playing(g::Game) = g.curplayer
 
-function GI.white_reward(g::Game)
+function terminal_white_reward(g::Game)
     has_won(g, WHITE) && return 1.0
     has_won(g, BLACK) && return -1.0
     isempty(GI.available_actions(g)) && return 0.0
     return nothing
+end
+
+function GI.white_reward(g::Game)
+  z = terminal_white_reward(g)
+  return isnothing(z) ? 0. : z
 end
 
 function GI.play!(g::Game, pos)
@@ -258,13 +271,21 @@ end
 ##### Machine Learning API
 #####
 
+function flip_colors(board)
+  flip(cell) = isnothing(cell) ? nothing : !cell
+  # Inference fails when using `map`
+  return @SVector Cell[flip(board[i]) for i in 1:NUM_POSITIONS]
+end
+
 # Vectorized representation: 3x3x3 array
 # Channels: free, white, black
-function GI.vectorize_board(::Type{Game}, board)
-    Float32[
-        board[pos_of_xy((x, y))] == c
-        for x = 1:BOARD_SIDE, y = 1:BOARD_SIDE, c in [nothing, WHITE, BLACK]
-    ]
+function GI.vectorize_state(::Type{Game}, state)
+  board = GI.white_playing(Game, state) ? state.board : flip_colors(state.board)
+  return Float32[
+    board[pos_of_xy((x, y))] == c
+    for x in 1:BOARD_SIDE,
+        y in 1:BOARD_SIDE,
+        c in [nothing, WHITE, BLACK]]
 end
 
 #####
