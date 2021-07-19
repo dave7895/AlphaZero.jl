@@ -57,17 +57,11 @@ We found the [Julia language](https://julialang.org/) to be instrumental in achi
 To download AlphaZero.jl and start training a Connect Four agent, just run:
 
 ```sh
-export JULIA_CUDA_MEMORY_POOL split # optional (for better GPU performances)
-
 git clone https://github.com/jonathan-laurent/AlphaZero.jl.git
 cd AlphaZero.jl
 julia --project -e 'import Pkg; Pkg.instantiate()'
 julia --project -e 'using AlphaZero; Scripts.train("connect-four")'
 ```
-
-**Note:** the latest version of AlphaZero.jl needs Julia version 1.6 or higher to run.
-Instructions on how to install the old v0.3 release can be found
-[here](https://jonathan-laurent.github.io/AlphaZero.jl/v0.3/tutorial/connect_four/).
 
 <div>
 <img src="./docs/src/assets/img/ui-first-iter-cut.png" width="48%" />
@@ -81,7 +75,7 @@ Instructions on how to install the old v0.3 release can be found
 
 <br/>
 
-Each training iteration takes between one and two hours on a desktop
+Each training iteration takes about one hour on a desktop
 computer with an Intel Core i5 9600K processor and an 8GB Nvidia RTX
 2070 GPU. We plot below the evolution of the win rate of our AlphaZero agent against two baselines (a vanilla MCTS baseline and a minmax agent that plans at depth 5 using a handcrafted heuristic):
 
@@ -120,6 +114,7 @@ For more information on training a Connect Four agent using AlphaZero.jl, see ou
 - [An Introduction to AlphaZero](https://jonathan-laurent.github.io/AlphaZero.jl/dev/tutorial/alphazero_intro/)
 - [Package Overview](https://jonathan-laurent.github.io/AlphaZero.jl/dev/tutorial/package_overview/)
 - [Connect-Four Tutorial](https://jonathan-laurent.github.io/AlphaZero.jl/dev/tutorial/connect_four/)
+- [Solving Your Own Games](https://jonathan-laurent.github.io/AlphaZero.jl/dev/tutorial/own_game/)
 - [Hyperparameters Documentation](https://jonathan-laurent.github.io/AlphaZero.jl/dev/reference/params/)
 
 ### Contributors
@@ -127,11 +122,19 @@ For more information on training a Connect Four agent using AlphaZero.jl, see ou
 * Jonathan Laurent: main developer
 * Pavel Dimens: logo design
 * Marek Kaluba: hyperparameters tuning for the grid-world example
+* Michał Łukomski: update Mancala implementation for compliance with the new game interface
 
 Contributions to AlphaZero.jl are most welcome. Many contribution ideas are available in our [contribution guide](https://jonathan-laurent.github.io/AlphaZero.jl/dev/contributing/guide/).
 Please do not hesitate to open a Github
 [issue](https://github.com/jonathan-laurent/AlphaZero.jl/issues) to share
 any idea, feedback or suggestion.
+
+### Supporting and Citing
+
+If you want to support this project and help it gain visibility, please consider starring
+the repository. Doing well on such metrics may also help us secure academic funding in the
+future. Also, if you use this software as part of your research, we would appreciate that
+you include the following [citation](./CITATION.bib) in your paper.
 
 ### Acknowledgements
 

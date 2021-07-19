@@ -24,18 +24,11 @@ To download AlphaZero.jl and start a new training session, just run the
 following:
 
 ```sh
-export JULIA_CUDA_MEMORY_POOL split # optional (for better GPU performances)
-
-git clone --branch v0.4.0 https://github.com/jonathan-laurent/AlphaZero.jl.git
+git clone --branch v0.5.0 https://github.com/jonathan-laurent/AlphaZero.jl.git
 cd AlphaZero.jl
 julia --project -e 'import Pkg; Pkg.instantiate()'
 julia --project -e 'using AlphaZero; Scripts.train("connect-four")'
 ```
-
-!!! note "Configuring CUDA.jl to use a splitting pool"
-
-    The first line is optional and it makes sure that CUDA.jl is precompiled to use a
-    splitting memory pool. Indeed, the splitting pool performs better than the default binned pool on AlphaZero's workload as it does not require to run the garbage collector as frequently.
 
 Instead of using [`Scripts.train`](@ref), one can do things more manually and run the following inside the Julia REPL:
 
@@ -131,7 +124,7 @@ decisions.
 ### Training
 
 After the initial benchmarks are done, the first training iteration can start.
-Each training iteration took between one and two hours on our hardware. The
+Each training iteration took about an hour on our hardware. The
 first iterations are typically on the shorter end, as games of self-play
 terminate more quickly and the memory buffer has yet to reach its final size.
 
@@ -297,6 +290,7 @@ self_play = SelfPlayParams(
   sim=SimParams(
     num_games=5000,
     num_workers=128,
+    batch_size=64,
     use_gpu=true,
     reset_every=2,
     flip_probability=0.,
@@ -313,6 +307,7 @@ arena = ArenaParams(
   sim=SimParams(
     num_games=128,
     num_workers=128,
+    batch_size=128,
     use_gpu=true,
     reset_every=2,
     flip_probability=0.5,
@@ -372,6 +367,7 @@ benchmark_sim = SimParams(
   arena.sim;
   num_games=256,
   num_workers=256,
+  batch_size=256,
   alternate_colors=false)
 
 benchmark = [

@@ -10,6 +10,8 @@ using ..AlphaZero
 using Base: @kwdef
 using Statistics: mean
 
+import Flux  # we use Flux.batch
+
 """
     AbstractNetwork
 
@@ -92,7 +94,8 @@ as an input by a given network.
 """
 function convert_input end
 
-function convert_input_tuple(nn::AbstractNetwork, input::Tuple)
+function convert_input_tuple(
+    nn::AbstractNetwork, input::Union{Tuple, NamedTuple})
   return map(input) do arr
     convert_input(nn, arr)
   end
@@ -106,7 +109,8 @@ to a standard CPU array (or number) type.
 """
 function convert_output end
 
-function convert_output_tuple(nn::AbstractNetwork, output::Tuple)
+function convert_output_tuple(
+    nn::AbstractNetwork, output::Union{Tuple, NamedTuple})
   return map(output) do arr
     convert_output(nn, arr)
   end
@@ -302,8 +306,8 @@ MCTS oracle interface.
 """
 function evaluate_batch(nn::AbstractNetwork, batch)
   gspec = game_spec(nn)
-  X = Util.superpose((GI.vectorize_state(gspec, b) for b in batch))
-  A = Util.superpose((GI.actions_mask(GI.init(gspec, b)) for b in batch))
+  X = Flux.batch((GI.vectorize_state(gspec, b) for b in batch))
+  A = Flux.batch((GI.actions_mask(GI.init(gspec, b)) for b in batch))
   Xnet, Anet = convert_input_tuple(nn, (X, Float32.(A)))
   P, V, _ = convert_output_tuple(nn, forward_normalized(nn, Xnet, Anet))
   return [(P[A[:,i],i], V[1,i]) for i in eachindex(batch)]
